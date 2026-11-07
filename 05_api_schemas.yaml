@@ -1,0 +1,214 @@
+# Контракт API по выданным шаблонам. CLI-прототип HTTP-сервер не запускает.
+openapi: 3.0.3
+info:
+  title: Tips Platform
+  version: "1.0.0"
+  description: Онлайн-чаевые для сети «Вкус-Сервис»
+servers:
+  - url: http://localhost:8083
+components:
+  schemas:
+    # Исходный образец QRPayload сохранён.
+    QRPayload:
+      type: object
+      required: [merchant_id, employee_id, receipt_id, nonce, exp, signature]
+      properties:
+        merchant_id: {type: string, pattern: '^m_[0-9]{3}$'}
+        employee_id: {type: string, pattern: '^e_[0-9]{3}$'}
+        receipt_id: {type: string, pattern: '^r_[0-9]{4}$'}
+        nonce: {type: string, pattern: '^[a-f0-9]{6}$'}
+        exp: {type: string, format: date-time}
+        signature: {type: string, pattern: '^[a-f0-9]{16}$'}
+    QRResponse:
+      type: object
+      required: [qr_id, merchant_id, employee_id, employee_name, receipt_id, base_amount, currency, tip_options]
+      properties:
+        qr_id: {type: string, pattern: '^qr_[0-9]{3}$'}
+        merchant_id: {type: string, pattern: '^m_[0-9]{3}$'}
+        employee_id: {type: string, pattern: '^e_[0-9]{3}$'}
+        employee_name: {type: string}
+        receipt_id: {type: string, pattern: '^r_[0-9]{4}$'}
+        base_amount: {type: number, exclusiveMinimum: true, minimum: 0, maximum: 1000000, multipleOf: 0.01, description: Сумма чека; в CSV QR её нет}
+        currency: {type: string, description: Код валюты чека}
+        tip_options: {type: array, items: {type: number, minimum: 0, maximum: 50}, example: [0, 5, 10, 15, 20]}
+    TipCreate:
+      type: object
+      required: [qr_id, receipt_id, base_amount, tip_pct, idempotency_key]
+      properties:
+        qr_id: {type: string, pattern: '^qr_[0-9]{3}$'}
+        receipt_id: {type: string, pattern: '^r_[0-9]{4}$'}
+        base_amount: {type: number, exclusiveMinimum: true, minimum: 0, maximum: 1000000, multipleOf: 0.01}
+        tip_pct: {type: number, minimum: 0, maximum: 50}
+        idempotency_key: {type: string, minLength: 1, description: Один ключ для всех повторов того же запроса}
+    Payment:
+      type: object
+      required: [payment_id, status, amount_total, tip_amount, error_code]
+      properties:
+        payment_id: {type: string, pattern: '^p_[0-9]{4}$'}
+        status: {type: string, enum: [CREATED, PENDING, SUCCESS, DECLINED, CANCELED]}
+        amount_total: {type: number, minimum: 0, maximum: 2000000, multipleOf: 0.01}
+        tip_amount: {type: number, minimum: 0, multipleOf: 0.01}
+        confirm_token: {type: string, description: Выдаётся для CREATED; передаётся при подтверждении}
+        error_code: {type: string, nullable: true}
+    Report:
+      type: object
+      required: [merchant_id, period, tips_total, payments_count, avg_tip_pct, success_rate]
+      properties:
+        merchant_id: {type: string}
+        period: {type: string, example: '2025-11'}
+        tips_total: {type: number, minimum: 0}
+        payments_count: {type: integer, minimum: 0}
+        avg_tip_pct: {type: number, nullable: true, minimum: 0, maximum: 50}
+        success_rate: {type: number, nullable: true, minimum: 0, maximum: 1}
+    EmployeeReport:
+      type: object
+      required: [employee_id, period, tips_total, payments_count, avg_tip_amount, top_day]
+      properties:
+        employee_id: {type: string}
+        period: {type: string}
+        tips_total: {type: number, minimum: 0}
+        payments_count: {type: integer, minimum: 0}
+        avg_tip_amount: {type: number, nullable: true, minimum: 0}
+        top_day: {type: string, format: date, nullable: true}
+    DailyReport:
+      type: object
+      required: [merchant_id, daily]
+      properties:
+        merchant_id: {type: string}
+        daily:
+          type: array
+          items:
+            type: object
+            required: [date, tips_total, payments_count, avg_tip_pct]
+            properties:
+              date: {type: string, format: date}
+              tips_total: {type: number, minimum: 0}
+              payments_count: {type: integer, minimum: 0}
+              avg_tip_pct: {type: number, nullable: true, minimum: 0, maximum: 50}
+    Error:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code: {type: string}
+        message: {type: string}
+        retryable: {type: boolean}
+        details: {type: object, additionalProperties: true}
+  responses:
+    ErrorResponse:
+      description: Ошибка; причина определяется error_code
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    PaymentResponse:
+      description: Текущее состояние платежа
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Payment'}
+  parameters:
+    PaymentId: {name: id, in: path, required: true, schema: {type: string, pattern: '^p_[0-9]{4}$'}}
+    From: {name: from, in: query, required: true, schema: {type: string, format: date}}
+    To: {name: to, in: query, required: true, schema: {type: string, format: date}}
+paths:
+  # Исходный образец Health сохранён.
+  /health:
+    get:
+      summary: Проверка живости
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {type: object, properties: {status: {type: string}}}
+  /api/v1/qr/{qr_id}:
+    get:
+      summary: Данные QR для формы чаевых
+      parameters: [{name: qr_id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200':
+          description: Валидный QR и данные чека
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QRResponse'}
+        '403': {$ref: '#/components/responses/ErrorResponse'}
+        '404': {$ref: '#/components/responses/ErrorResponse'}
+        '409': {$ref: '#/components/responses/ErrorResponse'}
+        '410': {$ref: '#/components/responses/ErrorResponse'}
+        '422': {$ref: '#/components/responses/ErrorResponse'}
+  /api/v1/tips:
+    post:
+      summary: Создать CREATED или вернуть платёж по прежнему ключу
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/TipCreate'}
+      responses:
+        '200': {$ref: '#/components/responses/PaymentResponse'}
+        '201': {$ref: '#/components/responses/PaymentResponse'}
+        '403': {$ref: '#/components/responses/ErrorResponse'}
+        '409': {$ref: '#/components/responses/ErrorResponse'}
+        '410': {$ref: '#/components/responses/ErrorResponse'}
+        '422': {$ref: '#/components/responses/ErrorResponse'}
+  /api/v1/payments/{id}/confirm:
+    post:
+      summary: Подтвердить CREATED; повтор не вызывает шлюз заново
+      parameters: [{$ref: '#/components/parameters/PaymentId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm_token]
+              properties:
+                confirm_token: {type: string}
+      responses:
+        '200': {$ref: '#/components/responses/PaymentResponse'}
+        '202': {$ref: '#/components/responses/PaymentResponse'}
+        '402': {$ref: '#/components/responses/PaymentResponse'}
+        '403': {$ref: '#/components/responses/ErrorResponse'}
+        '404': {$ref: '#/components/responses/ErrorResponse'}
+        '409': {$ref: '#/components/responses/ErrorResponse'}
+  /api/v1/payments/{id}/cancel:
+    post:
+      summary: Отменить только CREATED
+      parameters: [{$ref: '#/components/parameters/PaymentId'}]
+      responses:
+        '200': {$ref: '#/components/responses/PaymentResponse'}
+        '404': {$ref: '#/components/responses/ErrorResponse'}
+        '409': {$ref: '#/components/responses/ErrorResponse'}
+  /api/v1/reports/tips:
+    get:
+      summary: Отчёт по заведению или личный отчёт официанта
+      description: Нужен ровно один фильтр merchant_id или employee_id; права на объект проверяет сервер.
+      parameters:
+        - {name: merchant_id, in: query, required: false, schema: {type: string}}
+        - {name: employee_id, in: query, required: false, schema: {type: string}}
+        - {$ref: '#/components/parameters/From'}
+        - {$ref: '#/components/parameters/To'}
+      responses:
+        '200':
+          description: Агрегаты по выбранному объекту за период
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/Report'}
+                  - {$ref: '#/components/schemas/EmployeeReport'}
+        '403': {$ref: '#/components/responses/ErrorResponse'}
+        '422': {$ref: '#/components/responses/ErrorResponse'}
+  /api/v1/reports/tips/daily:
+    get:
+      summary: Дневной разрез по заведению из шаблона отчётности
+      parameters:
+        - {name: merchant_id, in: query, required: true, schema: {type: string}}
+        - {$ref: '#/components/parameters/From'}
+        - {$ref: '#/components/parameters/To'}
+      responses:
+        '200':
+          description: Показатели по дням UTC
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DailyReport'}
+        '403': {$ref: '#/components/responses/ErrorResponse'}
+        '422': {$ref: '#/components/responses/ErrorResponse'}

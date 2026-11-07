@@ -1,0 +1,8 @@
+.build/
+__pycache__/
+*.pyc
+*.tmp
+.env
+payments_state.sqlite3*
+payments_out.csv
+audit_out.jsonl
