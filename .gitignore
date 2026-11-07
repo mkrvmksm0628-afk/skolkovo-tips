@@ -6,3 +6,4 @@ __pycache__/
 payments_state.sqlite3*
 payments_out.csv
 audit_out.jsonl
+payments_demo_out.csv
