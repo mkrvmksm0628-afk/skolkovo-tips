@@ -1,1 +1,5 @@
-{"qr_id":"qr_001","receipt_id":"r_1001","base_amount":637.00,"tip_pct":5,"idempotency_key":"demo-qr-001"}
+{
+  "qr_id": "qr_001",
+  "base_amount": 637.0,
+  "tip_pct": 5
+}

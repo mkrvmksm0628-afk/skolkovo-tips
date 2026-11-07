@@ -1,7 +1,0 @@
-{
-  "validator": "openapi-spec-validator 0.9.0",
-  "openapi": "3.0.3",
-  "paths": 7,
-  "valid": true,
-  "swagger_editor": "Not completed: site remains on Loading after reload"
-}
