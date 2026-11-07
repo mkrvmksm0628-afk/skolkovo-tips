@@ -1,0 +1,66 @@
+{
+  "tests": 17,
+  "passed": 15,
+  "source_conflicts": 2,
+  "failures": 0,
+  "errors": 0,
+  "test_clock": "2025-11-01T18:00:00+00:00",
+  "examples": [
+    {
+      "qr_id": "qr_001",
+      "h": 9,
+      "expected": "SUCCESS",
+      "actual": {
+        "payment_id": "p_0101",
+        "status": "PENDING",
+        "amount_total": 668.85,
+        "tip_amount": 31.85,
+        "error_code": "GATEWAY_TIMEOUT",
+        "http_status": 202
+      },
+      "matches": false
+    },
+    {
+      "qr_id": "qr_003",
+      "h": 7,
+      "expected": "DECLINED",
+      "actual": {
+        "payment_id": "p_0101",
+        "status": "SUCCESS",
+        "amount_total": 1047.65,
+        "tip_amount": 136.65,
+        "error_code": null,
+        "http_status": 200
+      },
+      "matches": false
+    },
+    {
+      "qr_id": "qr_002",
+      "h": 3,
+      "expected": "SUCCESS",
+      "actual": {
+        "payment_id": "p_0101",
+        "status": "SUCCESS",
+        "amount_total": 668.85,
+        "tip_amount": 31.85,
+        "error_code": null,
+        "http_status": 200
+      },
+      "matches": true
+    },
+    {
+      "qr_id": "qr_019",
+      "h": 8,
+      "expected": "DECLINED",
+      "actual": {
+        "payment_id": "p_0101",
+        "status": "DECLINED",
+        "amount_total": 1047.65,
+        "tip_amount": 136.65,
+        "error_code": "CARD_DECLINED",
+        "http_status": 402
+      },
+      "matches": true
+    }
+  ]
+}

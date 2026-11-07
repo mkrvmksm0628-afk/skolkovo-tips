@@ -1,0 +1,22 @@
+test_T3_1_original_success_conflict (__main__.PaymentTests.test_T3_1_original_success_conflict) ... expected failure
+test_T3_2_original_declined_conflict (__main__.PaymentTests.test_T3_2_original_declined_conflict) ... expected failure
+test_T3_3_expiry_no_payment (__main__.PaymentTests.test_T3_3_expiry_no_payment) ... ok
+test_T3_3_signature_no_payment (__main__.PaymentTests.test_T3_3_signature_no_payment) ... ok
+test_T3_4_repeat_after_restart (__main__.PaymentTests.test_T3_4_repeat_after_restart) ... ok
+test_T3_5_cancel_created (__main__.PaymentTests.test_T3_5_cancel_created) ... ok
+test_T3_5_cancel_pending_forbidden (__main__.PaymentTests.test_T3_5_cancel_pending_forbidden) ... ok
+test_amount_and_percentage_limits (__main__.PaymentTests.test_amount_and_percentage_limits) ... ok
+test_blocked_merchant (__main__.PaymentTests.test_blocked_merchant) ... ok
+test_confirm_token_and_audit (__main__.PaymentTests.test_confirm_token_and_audit) ... ok
+test_decline_on_actual_decline_qr (__main__.PaymentTests.test_decline_on_actual_decline_qr) ... ok
+test_key_cannot_change_amount (__main__.PaymentTests.test_key_cannot_change_amount) ... ok
+test_qr_cannot_be_paid_twice (__main__.PaymentTests.test_qr_cannot_be_paid_twice) ... ok
+test_receipt_binding (__main__.PaymentTests.test_receipt_binding) ... ok
+test_success_on_actual_success_qr (__main__.PaymentTests.test_success_on_actual_success_qr) ... ok
+test_timeout_is_pending_and_repeated_once (__main__.PaymentTests.test_timeout_is_pending_and_repeated_once) ... ok
+test_ttl_boundary (__main__.PaymentTests.test_ttl_boundary) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.464s
+
+OK (expected failures=2)

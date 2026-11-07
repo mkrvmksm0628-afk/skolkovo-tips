@@ -1,0 +1,4 @@
+Команда: Get-FileHash -LiteralPath merchants.csv -Algorithm MD5
+Файл: merchants.csv
+MD5: 006d955099db8bbd8c3286d12f9077f9
+Исходный файл не изменялся.
