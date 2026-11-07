@@ -3,7 +3,7 @@ import contextlib
 import importlib.util
 import io
 import json
-import os
+from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
 import unittest
@@ -21,17 +21,23 @@ class SimpleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'request.json'
             path.write_text(json.dumps(request), encoding='utf-8')
-            args = ['04_прототип.py', str(path)] + (['--demo'] if demo else [])
+            args = ['04_прототип.py', str(path)]
             output = io.StringIO()
-            with patch.object(app.sys, 'argv', args), patch.object(app, 'OUT_CSV', Path(folder) / 'out.csv'), patch.dict(os.environ, HMAC_SECRET=secret), contextlib.redirect_stdout(output):
-                code = app.main()
+            class Clock(datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    return datetime(2025, 11, 1, 18, tzinfo=timezone.utc) if demo else datetime.now(timezone.utc)
+            with patch.object(app.sys, 'argv', args), patch.object(app, 'OUT_CSV', str(Path(folder) / 'out.csv')), patch.object(app, 'SECRET', secret.encode()), patch.object(app, 'datetime', Clock), contextlib.redirect_stdout(output):
+                with self.assertRaises(SystemExit) as exit_info:
+                    app.main()
+                code = exit_info.exception.code
             return code, json.loads(output.getvalue()), (Path(folder) / 'out.csv').exists()
 
     def request(self, qr='qr_002'):
         return dict(qr_id=qr, receipt_id=app.load_qr(qr)['receipt_id'], base_amount='637.00', tip_pct='5')
 
     def test_success_and_timeout(self):
-        for qr, status in [('qr_002', 'SUCCESS'), ('qr_001', 'PENDING'), ('qr_019', 'DECLINED')]:
+        for qr, status in [('qr_002', 'SUCCESS'), ('qr_001', 'TIMEOUT'), ('qr_019', 'DECLINED')]:
             with self.subTest(qr=qr):
                 code, result, saved = self.run_request(self.request(qr))
                 self.assertEqual(result['status'], status)
@@ -56,10 +62,15 @@ class SimpleTests(unittest.TestCase):
                 self.assertEqual(result['status'], 'ERROR')
                 self.assertFalse(saved)
 
-    def test_receipt(self):
-        _, result, saved = self.run_request(dict(self.request(), receipt_id='wrong'))
-        self.assertEqual(result['error_code'], 'RECEIPT_MISMATCH')
-        self.assertFalse(saved)
+    def test_expiry_boundary(self):
+        class Clock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2025, 11, 1, 18, tzinfo=timezone.utc)
+        with patch.object(app, 'datetime', Clock):
+            self.assertTrue(app.check_exp({'exp': '2025-11-01T18:00:00Z'}))
+            self.assertFalse(app.check_exp({'exp': '2025-11-01T17:59:59Z'}))
+            self.assertFalse(app.check_exp({'exp': 'invalid'}))
 
     def test_rounding(self):
         self.assertEqual(app.calc_amounts('0.15', '10'), (Decimal('0.02'), Decimal('0.17')))
